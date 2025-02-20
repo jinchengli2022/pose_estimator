@@ -1,4 +1,4 @@
-# Install script for directory: /home/ljc/Git/FoundationPose/mycpp
+# Install script for directory: /Git/pose_estimator/Foundationpose/mycpp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,7 +45,7 @@ endif()
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/ljc/Git/FoundationPose/mycpp/build/install_local_manifest.txt"
+  file(WRITE "/Git/pose_estimator/Foundationpose/mycpp/build/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
 if(CMAKE_INSTALL_COMPONENT)
@@ -61,6 +61,6 @@ else()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/ljc/Git/FoundationPose/mycpp/build/${CMAKE_INSTALL_MANIFEST}"
+  file(WRITE "/Git/pose_estimator/Foundationpose/mycpp/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

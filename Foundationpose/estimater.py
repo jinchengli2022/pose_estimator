@@ -15,6 +15,25 @@ from learning.training.predict_pose_refine import *
 import yaml
 
 
+# 计算旋转矩阵之间的角度差
+def get_rotation_angle(R1, R2):
+  # 如果 R1 和 R2 是 PyTorch 张量，确保它们都在同一设备上
+  if isinstance(R1, torch.Tensor):
+    device = R1.device
+  elif isinstance(R2, torch.Tensor):
+    device = R2.device
+  else:
+    device = 'cpu'  # 如果两者都不是张量，使用 CPU
+
+  # 将 R2 转移到与 R1 相同的设备（GPU 或 CPU）
+  R2 = R2.to(device)
+
+  # 计算矩阵乘法并使用迹来计算角度差异
+  trace = torch.trace(torch.mm(R1, R2.T))  # 计算矩阵相乘的迹
+  angle = torch.acos((trace - 1) / 2)  # 计算夹角
+  return angle.item() * 180 / torch.pi  # 返回角度，单位是度
+
+
 class FoundationPose:
   def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None, scorer:ScorePredictor=None, refiner:PoseRefinePredictor=None, glctx=None, debug=0, debug_dir='/home/bowen/debug/novel_pose_debug/'):
     self.gt_pose = None
@@ -156,7 +175,7 @@ class FoundationPose:
     return center.reshape(3)
 
 
-  def register(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None, iteration=5):
+  def register(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None, iteration=5, index=0):
     '''Copmute pose from given pts to self.pcd
     @pts: (N,3) np array, downsampled scene points
     '''
@@ -238,12 +257,50 @@ class FoundationPose:
 
     logging.info(f'sorted scores:{scores}')
 
-    best_pose = poses[0]@self.get_tf_to_centered_mesh()
-    self.pose_last = poses[0]
-    self.best_id = ids[0]
+    ### 检测方位角，如果大于阈值，则位姿检测顺延
+    print("开始位姿阈值检测", end="->")
+    threshold_angle = 360  # 替换为实际的阈值
+    i_tmp = 0 # 默认提取分数最高项
+    # 提取分数最高项的位姿
+    best_pose = poses[0] @ self.get_tf_to_centered_mesh()
+    # 检测方位角，如果大于阈值，则位姿检测顺延
+    if index != 0:
+      while True:
+        # 提取旋转部分（前三行前三列）
+        R1 = self.pose_before[:3, :3]
+        R2 = best_pose[:3, :3]
 
+        # 计算当前位姿与上一个位姿的角度差
+        angle_diff = get_rotation_angle(R1, R2)
+        print(f"当前角度差为{angle_diff}度", end="->")
+        # 如果角度差大于阈值，跳出循环
+        if angle_diff <= threshold_angle:
+          print(f"满足阈值条件{threshold_angle}度", end="->")
+          break
+        else:
+          print("不满足阈值条件，姿态顺延", end="->")
+          # 如果不满足条件，顺延读取序号
+          i_tmp += 1
+          best_pose = poses[i_tmp] @ self.get_tf_to_centered_mesh()  # 更新当前位姿
+
+    print("位姿阈值检测完成", end="   ")
+    best_pose = poses[i_tmp] @ self.get_tf_to_centered_mesh()
+    self.pose_last = poses[i_tmp]
+    self.best_id = ids[i_tmp]
     self.poses = poses
     self.scores = scores
+
+    self.pose_before = best_pose  # 更新前位姿
+    ### 之前部分，直接提取score最高的值
+    # best_pose = poses[0] @ self.get_tf_to_centered_mesh()
+    # self.pose_last = poses[0]
+    # self.best_id = ids[0]
+    #
+    # self.poses = poses
+    # self.scores = scores
+
+
+
 
     return best_pose.data.cpu().numpy()
 

@@ -17,7 +17,7 @@ import re
 import time as tim
 
 class PoseEstimationAPI:
-    def __init__(self, model_path, camera_path):
+    def __init__(self, model_path, camera_info):
         """
         初始化姿态估计API
         :param config: 配置字典，包含以下参数：
@@ -30,17 +30,17 @@ class PoseEstimationAPI:
         """
         set_seed(0)
         # 读取JSON文件
-        with open(camera_path, 'r') as f:
-            data = json.load(f)
+        # with open(camera_path, 'r') as f:
+        #     data = json.load(f)
 
         # 从camera.json数据中提取相机内参
-        cam_K = data['cam_K']
+        cam_K = camera_info['cam_K']
         camera_matrix = np.array([
             [cam_K[0], cam_K[1], cam_K[2]],
             [cam_K[3], cam_K[4], cam_K[5]],
             [cam_K[6], cam_K[7], cam_K[8]]
         ])
-        depth_scale = data['depth_scale']
+        depth_scale = camera_info['depth_scale']
 
         # 设置相关参数
         config = {
@@ -117,7 +117,8 @@ class PoseEstimationAPI:
             rgb=color_img,
             depth=depth_map,
             ob_mask=mask,
-            ob_id=obj_id
+            ob_id=obj_id,
+            index=frame_id
         )
 
         # 记录时间
